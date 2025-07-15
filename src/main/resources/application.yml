@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@//localhost:1521/XE
+    username: theyim
+    password: "0000"
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  kafka:
+    bootstrap-servers: localhost:29092 # 카프카 브로커 호스트:포트 (콤마로 여러 개 지정 가능)
+    consumer: # 컨슈머 그룹 ID (동일 ID끼리 Offset 공유)
+      group-id: campaign-group
+    template: # KafkaTemplate 기본 전송 토픽
+      default-topic: campaign-events
+
+  mybatis:
+    # mapper XML 파일(들)을 모두 로드
+    mapper-locations: classpath*:mapper/*.xml   # * 붙여 보세요
+    # 도메인 객체 패키지 (type aliases)
+    type-aliases-package: com.example.project.domain
+
+  logging:
+    level:
+      org.mybatis: DEBUG
+      org.mybatis.spring: DEBUG
+

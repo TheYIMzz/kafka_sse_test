@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.11.RELEASE</version>
+        <relativePath/>  <!-- 로컬 repo에서 가져오기 -->
+    </parent>
+
+    <groupId>org.example</groupId>
+    <artifactId>kafka_test_java8</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>1.8</java.version>
+        <!--
+        <servlet.api.version>4.0.1</servlet.api.version>
+        <catalina.version>6.0.29</catalina.version>
+        <coyote.version>6.0.29</coyote.version>
+        -->
+        <flatten.maven.plugin.version>1.1.0</flatten.maven.plugin.version>
+        <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
+        <maven.deploy.plugin.version>2.8.2</maven.deploy.plugin.version>
+        <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
+        <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
+        <hikari.version>3.3.1</hikari.version>
+        <mybatis.spring.boot.version>2.1.0</mybatis.spring.boot.version>
+        <mybatis.typehandlers.jsr310.version>1.0.2</mybatis.typehandlers.jsr310.version>
+        <log4jdbc.log4j2.version>1.16</log4jdbc.log4j2.version>
+        <jackson.version>2.9.9</jackson.version>
+        <commons.lang3.version>3.9</commons.lang3.version>
+        <commons.codec.version>1.15</commons.codec.version>
+        <lombok.version>1.18.8</lombok.version>
+        <cxf.version>3.3.2</cxf.version>
+        <junit.jupiter.version>5.5.1</junit.jupiter.version>
+        <junit.platform.version>1.5.1</junit.platform.version>
+        <restdocs.version>2.0.3.RELEASE</restdocs.version>
+        <oracle.version>19.3.0.0</oracle.version>
+        <jasypt.version>1.18</jasypt.version>
+        <log4j.version>2.20.0</log4j.version>
+        <cryptojs.version>3.1.2</cryptojs.version>
+        <base62.version>0.1.3</base62.version>
+    </properties>
+
+    <!-- 2. Spring Boot Maven 플러그인으로 JAR 내장 톰캣 설정 -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+
+    <dependencies>
+        <!-- 1) Web & SSE (Spring MVC 기반 SseEmitter 사용) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- (선택) 리액티브 SSE 를 원하면 webflux 추가 -->
+        <!--
+        <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        -->
+
+        <!-- 2) Kafka 프로듀서/컨슈머 -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- 3) JDBC + Oracle 드라이버 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.ojdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>${oracle.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- 4) MyBatis (이미 설정된 버전으로) -->
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>${mybatis.spring.boot.version}</version>
+        </dependency>
+
+        <!-- 5) (옵션) Debezium Oracle CDC 커넥터 사용 시 -->
+        <!--
+        <dependency>
+          <groupId>io.debezium</groupId>
+          <artifactId>debezium-connector-oracle</artifactId>
+          <version>1.6.0.Final</version>
+        </dependency>
+        -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.8</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis-spring</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+
+        <!--
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-srarter-data-redis</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
+        </dependency>-->
+
+    </dependencies>
+
+</project>
