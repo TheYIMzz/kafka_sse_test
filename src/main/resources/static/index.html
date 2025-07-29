@@ -1,50 +1,26 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>캠페인 대시보드</title>
+    <title>SSE 테스트</title>
 </head>
 <body>
-<h1>캠페인 대시보드</h1>
-<ul id="campaigns"></ul>
+<h1>SSE 이벤트 수신</h1>
+<ul id="events"></ul>
 
 <script>
-    // 사용자 ID → prompt 또는 URL 파라미터로 결정
-    var userId = prompt("사번을 입력하세요");
+    // EventSource(브라우저 내장 SSE 클라이언트 API)
+    // Server‑Sent Events(서버→클라이언트 단방향 푸시)
+    const es = new EventSource('/api/stream');
 
-    // SSE 연결
-    var es = new EventSource("/sse/connect/" + userId);
-    es.onmessage = function(e) {
-      var data = e.data.split(":");
-      var type = data[0];   // "new" 또는 "completed"
-      var id   = data[1];
-      var ul   = document.getElementById("campaigns");
+    // 메시지 이름이 "kafka-event"인 이벤트만 받음
+    es.addEventListener('kafka-event', e => {
+      const li = document.createElement('li');
+      li.textContent = e.data;
+      document.getElementById('events').appendChild(li);
+    });
 
-      if (type === "new") {
-        // 신규 캠페인 → 리스트에 추가
-        var li = document.createElement("li");
-        li.id = "camp-" + id;
-        li.innerHTML =
-          "Campaign #" + id +
-          ' <button onclick="complete(' + id + ')">완료</button>';
-        ul.appendChild(li);
-
-      } else if (type === "completed") {
-        // 완료 이벤트 → 버튼 대신 완료 표시
-        var li = document.getElementById("camp-" + id);
-        if (li) {
-          li.innerHTML = "Campaign #" + id + " ✅ 완료됨";
-        }
-      }
-    };
-
-    // 완료 API 호출
-    function complete(id) {
-      fetch("/campaign/complete/" + id, { method: "POST" })
-        .then(function(res) {
-          if (!res.ok) alert("완료 처리 실패: " + res.status);
-        });
-    }
+    es.onerror = err => console.error('SSE 에러', err);
 </script>
 </body>
 </html>

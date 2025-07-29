@@ -7,10 +7,13 @@ spring:
 
   kafka:
     bootstrap-servers: localhost:29092 # 카프카 브로커 호스트:포트 (콤마로 여러 개 지정 가능)
-    consumer: # 컨슈머 그룹 ID (동일 ID끼리 Offset 공유)
-      group-id: campaign-group
-    template: # KafkaTemplate 기본 전송 토픽
-      default-topic: campaign-events
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: sse-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
   mybatis:
     # mapper XML 파일(들)을 모두 로드

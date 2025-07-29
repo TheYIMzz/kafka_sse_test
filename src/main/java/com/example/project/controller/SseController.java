@@ -1,36 +1,36 @@
 package com.example.project.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import com.example.project.manager.SseEmitterManager;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+
 @RestController
+@RequestMapping("/api")
 public class SseController {
 
-    private ConcurrentHashMap<String, CopyOnWriteArrayList<SseEmitter>> emitters =
-            new ConcurrentHashMap<>();
+    private final SseEmitterManager manager;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    @GetMapping("/connect/{userId}")
-    public SseEmitter connect(@PathVariable String userId) {
-        SseEmitter emitter = new SseEmitter(0L);
-        emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>())
-                .add(emitter);
-        emitter.onCompletion(() -> emitters.get(userId).remove(emitter));
-        return emitter;
+    public SseController(SseEmitterManager manager,
+                         KafkaTemplate<String, String> kafkaTemplate) {
+        this.manager = manager;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void sendEvent(String userId, String data) throws IOException {
-        List<SseEmitter> list = emitters.get(userId);
-        if (list != null) {
-            for (SseEmitter e : list) {
-                e.send(data);
+    // 1) 클라이언트가 호출하면 SSE 연결(“롱‑라이브(long‑lived, 장시간 유지) HTTP 스트림”) 생성
+    @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter stream() {
+        return manager.createEmitter();
+    }
 
-            }
-        }
+    // 2) 테스트용 메시지 발행. Kafka로 보내면 Listener가 받아 SSE로 푸시
+    @PostMapping("/publish")
+    public ResponseEntity<Void> publish(@RequestParam String msg) {
+        kafkaTemplate.send("my-topic", msg);
+        return ResponseEntity.accepted().build();
     }
 }
