@@ -60,6 +60,7 @@ public class SseEmitterManager {
         return emitter;
     }
 
+    // 특정 orgId의 emitter 제거
     private void removeEmitter(String orgId, SseEmitter emitter) {
         List<SseEmitter> list = emittersByOrg.get(orgId);
         if (list != null) {
@@ -136,5 +137,31 @@ public class SseEmitterManager {
         return list;
     }
 
+    /**
+     * 현재 orgId별 연결 수 조회
+     */
+    public int getConnectionCount(String orgId) {
+        List<SseEmitter> list = emittersByOrg.get(orgId);
+        return list == null ? 0 : list.size();
+    }
+
+    /**
+     * 전체 연결 수 조회
+     */
+    public int getTotalConnectionCount() {
+        int sum = 0;
+        for (List<SseEmitter> list : emittersByOrg.values()) {
+            sum += list.size();
+        }
+        return sum;
+    }
+
+    /**
+     * 연결된 조직 ID 목록 조회
+     * emittersByOrg 키셋으로, 현재 구독 연결이 열린 orgId를 반환
+     */
+    public Set<String> getOrgIds() {
+        return Collections.unmodifiableSet(emittersByOrg.keySet());
+    }
 
 }

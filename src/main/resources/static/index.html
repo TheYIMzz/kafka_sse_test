@@ -11,22 +11,29 @@
 <ul id="events"></ul>
 
 <script>
-    let es;
+    let es = null;
     document.getElementById('connect').onclick = () => {
-      const orgId = document.getElementById('orgId').value;
-      // 이미 연결돼 있으면 닫고 새로 연결
-      if (es) es.close();
-      document.getElementById('events').innerHTML = '';
-      // 1) /api/stream?orgId=xxx 로 SSE 연결
-      es = new EventSource('/api/stream?orgId=' + encodeURIComponent(orgId));
-      es.onopen = () => console.log('SSE open for', orgId);
-      es.onerror = err => console.error('SSE error', err);
-      // 2) kafka-event 이벤트 리스너 등록
-      es.addEventListener('kafka-event', e => {
-        const li = document.createElement('li');
-        li.textContent = `[${orgId}] ${e.data}`;
-        document.getElementById('events').appendChild(li);
-      });
+        const orgId = document.getElementById('orgId').value;
+        // 이미 연결이 열려 있으면 재연결하지 않음
+        if (es && es.readyState === EventSource.OPEN) {
+            console.log('이미 연결되어 있습니다:', orgId);
+            return;
+        }
+        // 기존 연결이 있으면 닫기
+        if (es) {
+            es.close();
+            es = null;
+        }
+        document.getElementById('events').innerHTML = '';
+        // SSE 연결 생성
+        es = new EventSource('/api/stream?orgId=' + encodeURIComponent(orgId));
+        es.onopen = () => console.log('SSE open for', orgId);
+        es.onerror = err => console.error('SSE error', err);
+        es.addEventListener('kafka-event', e => {
+            const li = document.createElement('li');
+            li.textContent = `[${orgId}] ${e.data}`;
+            document.getElementById('events').appendChild(li);
+        });
     };
 </script>
 </body>
