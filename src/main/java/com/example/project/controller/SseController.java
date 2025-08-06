@@ -30,10 +30,15 @@ public class SseController {
      * - Last-Event-ID 헤더로 놓친 이벤트 replay
      */
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream( @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) throws IOException, IOException {
-        SseEmitter emitter = manager.createEmitter();
-        // replay missed events
-        List<Event> missed = manager.findEventsAfter(lastEventId);
+    public SseEmitter stream(
+            @RequestParam String orgId,
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId
+    ) throws IOException {
+        // 1) 새로운 emitter 생성 및 등록
+        SseEmitter emitter = manager.createEmitter(orgId);
+
+        // 2) 놓친 이벤트 replay
+        List<Event> missed = manager.findEventsAfter(orgId, lastEventId);
         for (Event ev : missed) {
             emitter.send(
                     SseEmitter.event()
@@ -42,13 +47,15 @@ public class SseController {
                             .data(ev.getData())
             );
         }
+
+        // 3) 실시간 publishEvent도 자동 전송
         return emitter;
     }
 
     // 2) 테스트용 메시지 발행. Kafka로 보내면 Listener가 받아 SSE로 푸시
     @PostMapping("/publish")
     public ResponseEntity<Void> publish(@RequestParam String msg) {
-        kafkaTemplate.send("my-topic", msg);
+        kafkaTemplate.send("my-topic", msg); // Kafka에 메시지 발행
         return ResponseEntity.accepted().build();
     }
 }

@@ -24,7 +24,11 @@ public class KafkaSseListener {
 
     // 수신된 문자열 메시지를 SSE 매니저에 전달 → 실시간 푸시
     @KafkaListener(topics = "my-topic", containerFactory = "kafkaListenerContainerFactory")
+    // topic 메시지는 "orgId:data" 형태로 전달
     public void onMessage(String message) {
-        manager.publishEvent(message); // Kafka 메시지를 받으면 즉시 SSE로 푸시
+        String[] parts = message.split(":", 2);
+        String orgId = parts[0];
+        String data = parts.length > 1 ? parts[1] : "";
+        manager.publishEvent(orgId, data); // orgId별로 SSE 푸시
     }
 }
