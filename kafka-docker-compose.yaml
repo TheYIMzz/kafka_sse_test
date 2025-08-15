@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # 1) ZooKeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181  # ZooKeeper 컨테이너가 “2181 포트”에서 클라이언트(Kafka 브로커)의 접속을 받도록 오픈
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - '2181:2181'
+
+  # 2) Kafka 브로커
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # 내부(컨테이너)와 외부(호스트) 리스너를 모두 바인딩
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      # 컨테이너 내부에서는 kafka:9092, 호스트에서는 localhost:29092 로 광고
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092, PLAINTEXT_HOST://localhost:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"    # 내부 클러스터용
+      - "29092:29092"  # 호스트 접속용
+
+
+  # 3) CMAK (Kafka Manager)
+  cmak:
+    image: hlebalbau/kafka-manager:latest
+    container_name: cmak
+    depends_on:
+      - zookeeper
+      - kafka
+    ports:
+      - '9001:9001'
+    environment:
+      # ZooKeeper 연결
+      ZK_HOSTS: 'zookeeper:2181'
+      # 자동으로 등록할 클러스터: alias|bootstrapServers|zookeeperHosts
+      KAFKA_CLUSTERS: 'local|kafka:9092|zookeeper:2181'
+      # 세션 암호화용 시크릿(임의 문자열)
+      APPLICATION_SECRET: 'random-secret-string'
+      # 접속 포트 변경 시 환경 변수 추가 HTTP_PORT: '9001'
+      HTTP_PORT: '9001'
+    command:
+      - '-Dhttp.port=9001'                # JVM 옵션으로 Play HTTP 포트 변경

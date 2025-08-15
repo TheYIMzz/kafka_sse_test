@@ -1,0 +1,162 @@
+version: "3.8"  # Compose 파일 포맷의 버전
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.8.1
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    TZ: Asia/Seoul
+  volumes:
+    - /app/portainer/volume/airflow_volume/dags:/opt/airflow/dags
+    - /app/portainer/volume/airflow_volume/logs:/opt/airflow/logs
+    - /app/portainer/volume/airflow_volume/config:/opt/airflow/config
+    - /app/portainer/volume/airflow_volume/plugins:/opt/airflow/plugins
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+  extra_hosts:
+    - "host.docker.internal:host-gateway"  # host.docker.internal 도메인을 호스트 머신(Docker가 돌아가는 호스트)의 IP(호스트 게이트웨이)로 자동 매핑해 주어, 컨테이너 안에서 curl http://host.docker.internal:<포트> 식으로 호스트의 서비스에 접근할 수 있게 해 줍
+  user: "50000:0"
+  depends_on: &airflow-common-depends-on
+    redis:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+  restart: always
+  networks: # 서비스 블록(또는 공통 앵커) 안의 networks: 는 “이 컨테이너를 어느 네트워크에 연결할지”를 지정
+    - theyim-network  #  - theyim-network 처럼, 연결할 네트워크 이름을 배열로 나열, 여러 개를 지정하면, 컨테이너가 그 네트워크들에 모두 동시에 연결
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: always
+    networks:
+      - theyim-network
+
+  redis:  # Airflow의 Celery 브로커 Redis
+    image: redis:7.0.11
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: always
+    networks:
+      - theyim-network
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  airflow-worker:
+    <<: *airflow-common
+    command: celery worker
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - >-
+          celery --app airflow.providers.celery.executors.celery_executor.app inspect ping
+          -d "celery@$${HOSTNAME}"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /sources/{logs,dags,plugins}
+        chown -R 50000:0 /sources/{logs,dags,plugins}
+        chmod -R 750 /sources/{logs,dags,plugins}
+        exec /entrypoint airflow version
+    user: "0:0"
+    volumes:
+      - /app/portainer/volume/airflow_volume:/sources # 초기화 시 airflow에서 사용할 디렉토리 생성 및 권한 설정
+
+  airflow-cli:
+    <<: *airflow-common
+    profiles:
+      - debug
+    command:
+      - bash
+      - -c
+      - airflow
+
+  flower:
+    <<: *airflow-common
+    command: celery flower
+    profiles:
+      - flower
+    ports:
+      - "5555:5555"
+    healthcheck:
+      test: ["CMD", "--fail", "http://localhost:5555/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+networks:  # 이미 Docker 데몬(또는 Portainer) 쪽에 만들어져 있는 theyim-network 라는 네트워크를 가져다 쓰겠다는 의미
+  theyim-network:    # Compose 스택이 사용할 네트워크를 선언
+    external: true   # true 시 네트워크 자동 생성 방지하고 지정한 네트워크 사용
+
+volumes:
+  postgres-db-volume: {}
