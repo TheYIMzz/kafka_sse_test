@@ -1,68 +1,37 @@
-# maven 용
-
 version: 0.2
 
 env:
   variables:
-    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport"   # (컨테이너 메모리 인식)
+    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport"
+
 phases:
   install:
+    runtime-versions:
+      java: corretto8          # << 자바 8 강제
     commands:
-      - echo "Install phase (의존성 프리캐시)"
+      - echo "Install (deps warmup)"
       - mvn -q -B -DskipTests dependency:go-offline
+
   pre_build:
     commands:
-      - echo "Pre-build (버전 확인)"
+      - echo "Pre-build (versions)"
       - java -version
       - mvn -v
+
   build:
     commands:
       - echo "Build & Test"
-      - mvn -q -B test         # (단위 테스트)
-      - mvn -q -B -DskipTests=false package
+      - mvn -q -B package      # (테스트 포함; 필요시 -DskipTests)
+
   post_build:
     commands:
-      - echo "Post-build (결과 확인)"
+      - echo "Artifacts"
       - ls -al target || true
+
 artifacts:
   files:
-    - target/*.jar             # (산출물 업로드)
+    - target/*.jar
+
 cache:
   paths:
-    - /root/.m2/**             # (Maven 캐시)
-
-
-
-
-# gradle 용
-#version: 0.2
-#
-#env:
-#  variables:
-#    GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs='-Xmx1g'"
-#phases:
-#  install:
-#    commands:
-#      - echo "Install phase (의존성 프리캐시)"
-#      - ./gradlew --no-daemon dependencies >/dev/null 2>&1 || true
-#  pre_build:
-#    commands:
-#      - echo "Pre-build (버전 확인)"
-#      - java -version
-#      - ./gradlew -v
-#  build:
-#    commands:
-#      - echo "Build & Test"
-#      - ./gradlew --no-daemon test
-#      - ./gradlew --no-daemon build
-#  post_build:
-#    commands:
-#      - echo "Post-build (결과 확인)"
-#      - ls -al build/libs || true
-#artifacts:
-#  files:
-#    - build/libs/*.jar
-#cache:
-#  paths:
-#    - /root/.gradle/caches/**   # (Gradle 캐시)
-#    - /root/.gradle/wrapper/**
+    - /root/.m2/**
