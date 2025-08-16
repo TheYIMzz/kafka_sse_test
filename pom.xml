@@ -51,6 +51,10 @@
 
     <!-- 2. Spring Boot Maven 플러그인으로 JAR 내장 톰캣 설정 -->
     <build>
+        <finalName>app</finalName>   <!-- CodeDeploy에서 files:로 고정 경로(/opt/myapp/app.jar)에 복사하기 쉽고
+                                          매 빌드마다 버전이름이 바뀌는 문제를 없애기 위해 추가
+                                          네이밍 패턴: 도메인+서비스(myapp-api.jar), 역할 구분(auth-service.jar), 서비스명 단일형 (myapp.jar)
+                                       -->
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
