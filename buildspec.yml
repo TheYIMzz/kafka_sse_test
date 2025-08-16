@@ -1,37 +1,40 @@
-version: 0.2
+version: 0.2  # CodeBuild 빌드스펙 포맷 버전. (0.2가 최신 계열)
 
 env:
   variables:
-    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport"
+    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport"  # JVM이 컨테이너 메모리/CPU 제한을 인식하도록 하는 플래그.
+                                                   # OOM 같은 이슈를 줄이고, CodeBuild의 컨테이너 리소스에 맞춰 힙 사이즈 등을 자동 튜닝.
 
-phases:
+
+phases:  # AWS CodeBuild 단계 이름 (install → pre_build → build → post_build 순서로 실행)
   install:
     runtime-versions:
-      java: corretto8          # << 자바 8 강제
+      java: corretto8  # 빌드 컨테이너 안에 Amazon Corretto 8 설치/선택 (Maven이 사용하는 JDK 버전이 여기서 결정됨.)
     commands:
       - echo "Install (deps warmup)"
-      - mvn -q -B -DskipTests dependency:go-offline
-
-  pre_build:
+      - mvn -q -B -DskipTests dependency:go-offline  # mvn dependency:go-offline: POM에 정의된 의존성/플러그인을 미리 로컬 캐시에 다운받아 둠 (/root/.m2)
+                                                     # -q(quiet) = 로그 잡음 줄임, -B(batch) = 비대화형 모드.
+                                                     # -DskipTests = 이 단계에서는 테스트를 돌리지 않음(의존성만 받는 게 목적이므로)
+  pre_build: # 디버깅/환경 로그 추적용. 실제 산출물에 영향 없음.
     commands:
       - echo "Pre-build (versions)"
-      - java -version
-      - mvn -v
+      - java -version  # 자바 버전 출력
+      - mvn -v   # Maven 버전 출력
 
-  build:
+  build:  # 핵심 빌드: compile → test → package까지 수행.
     commands:
       - echo "Build & Test"
-      - mvn -q -B package      # (테스트 포함; 필요시 -DskipTests)
+      - mvn -q -B package      # 이 단계에서 테스트코드 실행하므로 -DskipTests 미포함, 테스트코드 파라미터 필요 시 여기에 기술
 
-  post_build:
+  post_build: # 빌드 끝난 뒤 후처리 작업
     commands:
       - echo "Artifacts"
-      - ls -al target || true
+      - ls -al target  # 빌드 결과물이 생기는 target 폴더 안을 리스트 출력
 
 artifacts:
   files:
-    - target/*.jar
+    - target/*.jar  # AWS CodeBuild 컨테이너 내부 파일시스템에 생성 (빌드를 실행할 때 임시 전용 컨테이너)
 
 cache:
   paths:
-    - /root/.m2/**
+    - /root/.m2/**  # AWS CodeBuild 컨테이너 내부 파일시스템에 생성 (빌드를 실행할 때 임시 전용 컨테이너)
