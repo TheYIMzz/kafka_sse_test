@@ -41,7 +41,7 @@ phases:  # AWS CodeBuild 단계 이름 (install → pre_build → build → post
       - cp -r scripts bundle/ || true            # 배포 스크립트(scripts 폴더) 복사, 없으면 에러 무시
       - cp target/*.jar bundle/app.jar           # 빌드 산출물 JAR 파일을 app.jar 이름으로 복사
       - cd bundle && zip -r ../artifact.zip . && cd ..   # bundle 내용을 artifact.zip 으로 압축
-      - echo "[post_build] upload to S3: s3://$S3_BUCKET/$PACKAGE_KEY"   # 업로드 경로 로그 출력
+      - echo "[post_build] upload to S3 -> s3://$S3_BUCKET/$PACKAGE_KEY"   # 업로드 경로 로그 출력
       - aws s3 cp artifact.zip "s3://$S3_BUCKET/$PACKAGE_KEY"            # artifact.zip 파일을 지정 S3 버킷/키에 업로드
       - echo "[post_build] trigger CodeDeploy"   # CodeDeploy 트리거 로그 출력
       - aws deploy create-deployment --application-name "$APP_NAME" --deployment-group-name "$DEPLOY_GROUP" --revision "revisionType=S3,s3Location={bucket=$S3_BUCKET,key=$PACKAGE_KEY,bundleType=zip}"
