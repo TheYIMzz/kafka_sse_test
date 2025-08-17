@@ -45,7 +45,7 @@ phases:  # AWS CodeBuild 단계 이름 (install → pre_build → build → post
       - aws s3 cp artifact.zip "s3://$S3_BUCKET/$PACKAGE_KEY"              # artifact.zip 파일을 지정 S3 버킷/키에 업로드
       - echo "[post_build] trigger CodeDeploy"   # CodeDeploy 트리거 로그 출력
       - '[[ "${CODEBUILD_WEBHOOK_TRIGGER:-}" == "branch/main" ]] && aws deploy create-deployment --application-name "$APP_NAME" --deployment-group-name "$DEPLOY_GROUP" --revision "{\"revisionType\":\"S3\",\"s3Location\":{\"bucket\":\"$S3_BUCKET\",\"key\":\"$PACKAGE_KEY\",\"bundleType\":\"zip\"}}"'
-           # CodeDeploy 애플리케이션 이름 지정, 배포 그룹 지정, # 배포할 리비전(방금 업로드한 S3 ZIP 파일) 지정
+            # CodeDeploy 애플리케이션 이름 지정, 배포 그룹 지정, # 배포할 리비전(방금 업로드한 S3 ZIP 파일) 지정
 
 artifacts:
   files:
