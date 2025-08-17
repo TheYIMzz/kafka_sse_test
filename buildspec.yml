@@ -2,6 +2,10 @@ version: 0.2  # CodeBuild 빌드스펙 포맷 버전. (0.2가 최신 계열)
 
 env:
   variables:
+    APP_NAME: "MyApp"                     # CodeDeploy 애플리케이션 이름
+    DEPLOY_GROUP: "cicd-test-dev"         # CodeDeploy 배포 그룹 이름
+    S3_BUCKET: "theyim-bucket"            # 배포 번들 저장 버킷
+    PACKAGE_KEY: "releases/myapp-${CODEBUILD_RESOLVED_SOURCE_VERSION}.zip"
     JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport"  # JVM이 컨테이너 메모리/CPU 제한을 인식하도록 하는 플래그.
                                                    # OOM 같은 이슈를 줄이고, CodeBuild의 컨테이너 리소스에 맞춰 힙 사이즈 등을 자동 튜닝.
 
@@ -23,13 +27,29 @@ phases:  # AWS CodeBuild 단계 이름 (install → pre_build → build → post
 
   build:  # 핵심 빌드: compile → test → package까지 수행.
     commands:
-      - echo "Build & Test"
+      - echo "[build] mvn package"
       - mvn -q -B package      # 이 단계에서 테스트코드 실행하므로 -DskipTests 미포함, 테스트코드 파라미터 필요 시 여기에 기술
+      - test -f target/*.jar || (echo "JAR not found under target/"; exit 1)  # 빌드 결과물 JAR이 제대로 생겼는지 확인하는 안전 장치
 
   post_build: # 빌드 끝난 뒤 후처리 작업
     commands:
-      - echo "Artifacts"
-      - ls -al target  # 빌드 결과물이 생기는 target 폴더 안을 리스트 출력
+      - echo "[post_build] make deploy bundle"   # 현재 단계 로그 표시
+      # 배포 번들: appspec.yml + scripts/** + target/app.jar
+      - rm -rf bundle artifact.zip               # 이전 빌드 잔여 bundle 폴더와 zip 파일 삭제
+      - mkdir -p bundle                          # 새 bundle 폴더 생성
+      - cp appspec.yml bundle/                   # CodeDeploy용 appspec.yml 복사
+      - cp -r scripts bundle/ || true            # 배포 스크립트(scripts 폴더) 복사, 없으면 에러 무시
+      - cp target/*.jar bundle/app.jar           # 빌드 산출물 JAR 파일을 app.jar 이름으로 복사
+      - cd bundle && zip -r ../artifact.zip . && cd ..   # bundle 내용을 artifact.zip 으로 압축
+      - echo "[post_build] upload to S3: s3://$S3_BUCKET/$PACKAGE_KEY"   # 업로드 경로 로그 출력
+      - aws s3 cp artifact.zip "s3://$S3_BUCKET/$PACKAGE_KEY"            # artifact.zip 파일을 지정 S3 버킷/키에 업로드
+      - echo "[post_build] trigger CodeDeploy"   # CodeDeploy 트리거 로그 출력
+      - >                                        # 멀티라인 명령어 시작
+        aws deploy create-deployment \
+        --application-name "$APP_NAME" \           # CodeDeploy 애플리케이션 이름 지정
+        --deployment-group-name "$DEPLOY_GROUP" \  # 배포 그룹 지정
+        --revision revisionType=S3,s3Location={bucket=$S3_BUCKET,key=$PACKAGE_KEY,bundleType=zip}  
+                                                   # 배포할 리비전(방금 업로드한 S3 ZIP 파일) 지정
 
 artifacts:
   files:
