@@ -1,5 +1,11 @@
+# CodeDeploy가 무엇을 어디에 배치하고(파일 복사), 어떤 순서로 어떤 스크립트를 실행할지를 읽는 배포 매니페스트
+# CodeDeploy 에이전트는 **배포 아티팩트 안의 appspec.yml**을 꼭 찾아 읽습니다. 없으면 배포 자체가 실패합니다.
+# 그래서 Build 단계에서 아티팩트로 반드시 포함해 Deploy 단계로 넘깁니다.
+
+
 version: 0.0
 os: linux
 files:
   - source: app.jar
     destination: /opt/myapp
+    overwrite: true
