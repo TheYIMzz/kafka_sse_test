@@ -23,7 +23,7 @@ phases:  # AWS CodeBuild 단계 이름 (install → pre_build → build → post
     commands:
       - echo "Pre-build (versions)"
       - java -version  # 자바 버전 출력
-      - mvn -v   # Maven 버전 출력
+      - mvn -v         # Maven 버전 출력
 
   build:  # 핵심 빌드: compile → test → package까지 수행.
     commands:
